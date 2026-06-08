@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Multimoneda - Iniciar Sesión</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen font-sans text-slate-100">
+
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-400 tracking-tight">SISTEMA POS</h1>
+            <p class="text-slate-400 mt-2">Ingresa tus credenciales de acceso</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Correo Electrónico</label>
+                <input type="email" id="email" required class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-indigo-500 transition" placeholder="usuario@comercio.com">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Contraseña</label>
+                <input type="password" id="password" required class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-indigo-500 transition" placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="btnLogin" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 font-bold text-white rounded-xl shadow-lg shadow-indigo-600/30 transition transform active:scale-95">
+                Ingresar al Sistema
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://magwwelvdqpcjrhabnju.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZ3d3ZWx2ZHFwY2pyaGFibmp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzM0OTYsImV4cCI6MjA5NjUwOTQ5Nn0.OPYjHKVRQ8Ryqh5-0sXJFidUhSUehGr64ApWozO3h5k";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                const { data: perfil, error: perfilError } = await supabase
+                    .from('perfiles')
+                    .select('rol, aliado_id, aliados(estado)')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (perfilError || !perfil) {
+                    throw new Error("No se encontró un perfil comercial vinculado.");
+                }
+
+                if (perfil.aliados.estado !== 'activo') {
+                    Swal.fire('Licencia Suspendida', 'La licencia de este aliado comercial se encuentra pausada.', 'error');
+                    await supabase.auth.signOut();
+                    btn.disabled = false;
+                    btn.innerText = "Ingresar al Sistema";
+                    return;
+                }
+
+                localStorage.setItem('pos_aliado_id', perfil.aliado_id);
+                localStorage.setItem('pos_user_rol', perfil.rol);
+
+                if (perfil.rol === 'admin') {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'vendedor.html';
+                }
+
+            } catch (err) {
+                Swal.fire('Error de Acceso', err.message, 'error');
+                btn.disabled = false;
+                btn.innerText = "Ingresar al Sistema";
+            }
+        });
+    </script>
+</body>
+</html>

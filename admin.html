@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS - Panel de Control Administrativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex font-sans">
+
+    <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between">
+        <div class="p-6 space-y-6">
+            <h1 class="text-lg font-black text-indigo-400 tracking-wider">ADMIN CONSOLE</h1>
+            <nav class="space-y-1">
+                <button onclick="cambiarVistaAdmin('inventario')" class="adm-btn w-full text-left bg-indigo-600 font-bold p-3 rounded-xl transition block">📦 Inventario / Productos</button>
+                <button onclick="cambiarVistaAdmin('compras')" class="adm-btn w-full text-left hover:bg-slate-700/60 font-bold p-3 rounded-xl transition block">📥 Registrar Compras</button>
+                <button onclick="cambiarVistaAdmin('mermas')" class="adm-btn w-full text-left hover:bg-slate-700/60 font-bold p-3 rounded-xl transition block">🍂 Control Mermas</button>
+                <button onclick="cambiarVistaAdmin('config')" class="adm-btn w-full text-left hover:bg-slate-700/60 font-bold p-3 rounded-xl transition block">⚙️ Ajustes / Clave Master</button>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-slate-700">
+            <button onclick="cerrarSesion()" class="w-full bg-rose-600 hover:bg-rose-500 p-2.5 rounded-xl font-bold text-sm transition">Cerrar Sesión</button>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        
+        <section id="adm-inventario" class="adm-vista space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Catálogo Maestro de Productos</h2>
+                <button onclick="abrirModalCrearProducto()" class="bg-emerald-600 hover:bg-emerald-500 font-bold px-4 py-2 rounded-xl text-sm transition">+ Crear Nuevo Item</button>
+            </div>
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-900/50 border-b border-slate-700 text-slate-400 text-xs uppercase font-bold">
+                            <th class="p-4">SKU</th>
+                            <th class="p-4">Nombre</th>
+                            <th class="p-4 text-right">Costo ($)</th>
+                            <th class="p-4 text-right">Venta ($)</th>
+                            <th class="p-4 text-center">Stock</th>
+                            <th class="p-4 text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaAdminProductos" class="divide-y divide-slate-700 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="adm-compras" class="adm-vista hidden max-w-xl bg-slate-800 p-6 rounded-2xl border border-slate-700 mx-auto space-y-4">
+            <h2 class="text-xl font-bold text-indigo-400">Entrada de Mercancía (Aumentar Inventario)</h2>
+            <div class="space-y-4">
+                <div><label class="text-xs text-slate-400">Seleccionar Producto (SKU)</label><input type="text" id="compraSku" class="w-full p-2.5 bg-slate-900 border border-slate-600 rounded-xl"></div>
+                <div><label class="text-xs text-slate-400">Cantidad Recibida</label><input type="number" id="compraCant" value="0" class="w-full p-2.5 bg-slate-900 border border-slate-600 rounded-xl"></div>
+                <button onclick="ejecutarIngresoCompra()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 font-bold rounded-xl transition">Procesar Ingreso a Almacén</button>
+            </div>
+        </section>
+
+        <section id="adm-mermas" class="adm-vista hidden max-w-xl bg-slate-800 p-6 rounded-2xl border border-slate-700 mx-auto space-y-4">
+            <h2 class="text-xl font-bold text-rose-400">Registro y Descuento de Mermas / Daños</h2>
+            <div class="space-y-4">
+                <div><label class="text-xs text-slate-400">SKU del Producto Afectado</label><input type="text" id="mermaSku" class="w-full p-2.5 bg-slate-900 border border-slate-600 rounded-xl"></div>
+                <div><label class="text-xs text-slate-400">Cantidad Desechada</label><input type="number" id="mermaCant" value="0" class="w-full p-2.5 bg-slate-900 border border-slate-600 rounded-xl"></div>
+                <button onclick="ejecutarDescuentoMerma()" class="w-full bg-rose-600 hover:bg-rose-500 py-3 font-bold rounded-xl transition">Declarar Merma Estricta</button>
+            </div>
+        </section>
+
+        <section id="adm-config" class="adm-vista hidden max-w-md bg-slate-800 p-6 rounded-2xl border border-slate-700 mx-auto space-y-6">
+            <h2 class="text-xl font-bold text-indigo-400">Ajustes de Seguridad del Sistema</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Clave Maestra de Autorización (Caja)</label>
+                    <input type="text" id="txtConfigClaveMaster" class="w-full p-2.5 bg-slate-900 border border-slate-600 rounded-xl font-mono text-center text-lg">
+                </div>
+                <button onclick="guardarClaveMasterNueva()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 font-bold rounded-xl transition">Actualizar Clave Maestra</button>
+            </div>
+            <hr class="border-slate-700">
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-700">
+                <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Panel Control Aliados Licencia</h3>
+                <div class="flex gap-2">
+                    <select id="selEstadoLicencia" class="w-full p-2 bg-slate-900 border border-slate-600 rounded-lg text-sm"><option value="activo">ACTIVO (Habilitado)</option><option value="pausado">PAUSADO (Bloquear Accesos)</option></select>
+                    <button onclick="cambiarEstadoLicenciaRemota()" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 rounded-lg border border-slate-500">Aplicar</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const SUPABASE_URL = "https://magwwelvdqpcjrhabnju.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZ3d3ZWx2ZHFwY2pyaGFibmp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzM0OTYsImV4cCI6MjA5NjUwOTQ5Nn0.OPYjHKVRQ8Ryqh5-0sXJFidUhSUehGr64ApWozO3h5k";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let aliadoId = localStorage.getItem('pos_aliado_id');
+
+        async function inicializarAdmin() {
+            if(!aliadoId || localStorage.getItem('pos_user_rol') !== 'admin') { cerrarSesion(); return; }
+            cargarInventarioAdminEstructura();
+            
+            const { data } = await supabase.from('aliados').select('*').eq('id', aliadoId).single();
+            if(data) {
+                document.getElementById('txtConfigClaveMaster').value = data.clave_maestra;
+                document.getElementById('selEstadoLicencia').value = data.estado;
+            }
+        }
+
+        function cambiarVistaAdmin(vId) {
+            document.querySelectorAll('.adm-vista').forEach(v => v.classList.add('hidden'));
+            document.getElementById('adm-' + vId).classList.remove('hidden');
+            document.querySelectorAll('.adm-btn').forEach(b => b.classList.replace('bg-indigo-600', 'hover:bg-slate-700/60'));
+            event.currentTarget.classList.replace('hover:bg-slate-700/60', 'bg-indigo-600');
+        }
+
+        async function cargarInventarioAdminEstructura() {
+            const { data } = await supabase.from('productos').select('*');
+            const tbody = document.getElementById('tablaAdminProductos');
+            tbody.innerHTML = "";
+            if(data) {
+                data.forEach(p => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-700/30 transition">
+                            <td class="p-4 font-mono font-bold">${p.sku}</td>
+                            <td class="p-4 font-semibold">${p.nombre}</td>
+                            <td class="p-4 text-right text-slate-400">$${parseFloat(p.costo_usd).toFixed(2)}</td>
+                            <td class="p-4 text-right text-emerald-400 font-bold">$${parseFloat(p.precio_usd).toFixed(2)}</td>
+                            <td class="p-4 text-center font-bold ${p.stock <= p.stock_minimo ? 'text-rose-400' : 'text-white'}">${p.stock}</td>
+                            <td class="p-4 text-center"><button onclick="eliminarProductoAdmin('${p.id}')" class="text-rose-500 hover:text-rose-400 text-xs font-bold">Eliminar</button></td>
+                        </tr>`;
+                });
+            }
+        }
+
+        async function abrirModalCrearProducto() {
+            const { value: f } = await Swal.fire({
+                title: 'Crear Producto',
+                html: '<input id="p-sku" class="swal2-input" placeholder="SKU"><input id="p-nom" class="swal2-input" placeholder="Nombre"><input id="p-costo" type="number" step="0.01" class="swal2-input" placeholder="Costo USD"><input id="p-precio" type="number" step="0.01" class="swal2-input" placeholder="Precio Venta USD"><input id="p-stock" type="number" class="swal2-input" placeholder="Stock Inicial">',
+                preConfirm: () => [document.getElementById('p-sku').value, document.getElementById('p-nom').value, document.getElementById('p-costo').value, document.getElementById('p-precio').value, document.getElementById('p-stock').value]
+            });
+            if(f && f[0] && f[1]) {
+                await supabase.from('productos').insert({ aliado_id: aliadoId, sku: f[0], nombre: f[1], costo_usd: parseFloat(f[2])||0, precio_usd: parseFloat(f[3])||0, stock: parseInt(f[4])||0 });
+                cargarInventarioAdminEstructura();
+            }
+        }
+
+        async function eliminarProductoAdmin(id) {
+            if(confirm("¿Eliminar este item del catálogo maestro?")) {
+                await supabase.from('productos').delete().eq('id', id);
+                cargarInventarioAdminEstructura();
+            }
+        }
+
+        async function ejecutarIngresoCompra() {
+            const sku = document.getElementById('compraSku').value.trim();
+            const cant = parseInt(document.getElementById('compraCant').value) || 0;
+            if(!sku || cant <= 0) return;
+            const { data } = await supabase.from('productos').select('*').eq('sku', sku).single();
+            if(data) {
+                await supabase.from('productos').update({ stock: data.stock + cant }).eq('id', data.id);
+                Swal.fire('Éxito', 'Stock incrementado vía compras', 'success');
+                document.getElementById('compraCant').value = 0;
+                cargarInventarioAdminEstructura();
+            }
+        }
+
+        async function ejecutarDescuentoMerma() {
+            const sku = document.getElementById('mermaSku').value.trim();
+            const cant = parseInt(document.getElementById('mermaCant').value) || 0;
+            if(!sku || cant <= 0) return;
+            const { data } = await supabase.from('productos').select('*').eq('sku', sku).single();
+            if(data) {
+                await supabase.from('productos').update({ stock: Math.max(0, data.stock - cant) }).eq('id', data.id);
+                Swal.fire('Merma Aplicada', 'Stock descontado del inventario activo', 'warning');
+                document.getElementById('mermaCant').value = 0;
+                cargarInventarioAdminEstructura();
+            }
+        }
+
+        async function guardarClaveMasterNueva() {
+            const nClave = document.getElementById('txtConfigClaveMaster').value.trim();
+            if(!nClave) return;
+            await supabase.from('aliados').update({ clave_maestra: nClave }).eq('id', aliadoId);
+            Swal.fire('Guardado', 'La clave maestra operativa fue modificada', 'success');
+        }
+
+        async function cambiarEstadoLicenciaRemota() {
+            const est = document.getElementById('selEstadoLicencia').value;
+            await supabase.from('aliados').update({ estado: est }).eq('id', aliadoId);
+            Swal.fire('Estatus de Licencia', `El aliado se encuentra ahora en estado: ${est.toUpperCase()}`, 'info');
+        }
+
+        function cerrarSesion() { localStorage.clear(); window.location.href = 'index.html'; }
+
+        window.onload = inicializarAdmin;
+    </script>
+</body>
+</html>
